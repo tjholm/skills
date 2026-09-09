@@ -1,0 +1,16 @@
+# Rules
+
+One markdown file per rule, nested however you like:
+
+    rules/<rule-name>.md
+    rules/<category>/<rule-name>.md
+
+Claude Code loads everything under `~/.claude/rules` as user-scope memory in
+every session, walking the tree recursively. A `paths:` frontmatter key narrows
+a rule to sessions that touch matching files.
+
+Only `.md` is picked up, and every `.md` found becomes a rule -- which is why
+this file carries no extension.
+
+Nothing installs these yet -- the `skills` CLI covers skills only. Copy or
+symlink what you want into `~/.claude/rules/` by hand.
