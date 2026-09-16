@@ -1,11 +1,11 @@
 ---
 name: walkthrough
-description: Trace a change or module in execution order with the user, stopping at each decision to ask what they expect before revealing it, and finishing with the user explaining it back. Use when the user wants to understand code they own but did not write, when a comprehension-debt item is being paid down, and when the user says "walk me through", "help me understand this", or "I don't actually know how this works".
+description: Trace a change or module in execution order with the user, stopping at each decision to ask what they expect before revealing it, and finishing with the user explaining it back. Use when the user wants to understand code they own but did not write, when working through a comprehension-debt target, and when the user says "walk me through", "help me understand this", or "I don't actually know how this works".
 ---
 
 # Walkthrough
 
-Code that passes its tests and that no human understands is a liability with a green badge. A walkthrough converts one unit of that code into code someone can reason about, and records that it happened.
+Code that passes its tests and that no human understands is a liability with a green badge. A walkthrough converts one unit of that code into code someone can reason about.
 
 ## 1. Scope
 
@@ -35,25 +35,19 @@ Compare against the trace and name the gaps concretely:
 
 No praise for what they got right. The gaps are the output.
 
-## 4. Record
+## 4. Leave the understanding in the code
 
-Write the result to `.comprehension/ledger`, one line per unit, tab-separated:
+Nothing is recorded outside the repository. What the walkthrough found goes where the next reader will meet it:
 
-```
-path/to/file.ext	<short sha>	<YYYY-MM-DD>	<user>
-```
+- a decision with no recorded reason gets a one-line why-comment at the site, or a note in the next commit that touches it, following the repo's comment rules
+- code the walkthrough revealed as dead, wrong, or hedging is named as a candidate for `simplify-code` or an issue, not fixed now
+- what the user missed in the explain-back is theirs to note; do not write it into the code
 
-`comprehension-debt` reads this to know what has been understood and when. Commit the ledger; it is team knowledge.
-
-Then report, briefly:
-
-- decisions with no recorded reason, as candidates for a comment, a commit message, or `simplify-code`
-- anything the walkthrough revealed as wrong or dead, as candidates for an issue
-- what the user missed in the explain-back, for their own note
+Then report those three lists, briefly.
 
 ## Do not
 
 - Summarise the code instead of showing it. The user is here to read it.
 - Reveal what happens at a branch before asking.
 - Turn the walkthrough into a review. Findings are noted, not fixed, unless the user stops to fix one.
-- Walk more than one unit without recording the first.
+- Walk more than one unit in a sitting without finishing the explain-back for the first.

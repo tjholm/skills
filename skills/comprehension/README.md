@@ -7,10 +7,9 @@ most of. Each skill rests on a specific finding rather than on a metaphor.
     decision-handoff/     agent does rote, user makes the calls, options framed at each one
     socratic-debugging/   questions direct the investigation; the agent's theory waits
     walkthrough/          trace a unit in execution order, then the user explains it back
-    comprehension-debt/   inventory agent-authored code nobody has walked; rank it
+    comprehension-debt/   rank files by the measurable shape of generated code
 
-`walkthrough` writes `.comprehension/ledger`; `comprehension-debt` reads it.
-The others stand alone.
+All five are stateless: nothing is written outside the code and its history.
 
 Grounding, briefly: Osmani and Willison on comprehension and cognitive debt;
 Beck's augmented-coding red flags; the Anthropic learning output style's
