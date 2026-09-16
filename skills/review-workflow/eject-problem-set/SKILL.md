@@ -24,7 +24,7 @@ Findings map to tasks n:m.
 
 - **Merge** findings that share one fix, or that sit in the same function. Separate agents editing the same lines will conflict.
 - **Split** a finding spanning independent files into one task per file.
-- **File as `wontfix`** anything you cannot state a concrete failure for, with the reason in the body. Do not drop it silently and do not hand an agent an unverified finding.
+- **File as `wontfix`** anything you cannot state a concrete failure for, or, for a simplification, a proven fact that makes the code unnecessary, with the reason in the body. Do not drop it silently and do not hand an agent an unverified finding.
 
 Group so that no two `todo` tasks list the same file. Where that is impossible, set `depends_on`.
 
@@ -67,7 +67,7 @@ In this order:
 
 **Location.** `path/to/file.ext:120-134`, with the current code quoted inline. Line numbers go stale as soon as an earlier task edits the file, so the quoted snippet is authoritative: the agent finds the site by matching the snippet.
 
-**Defect.** A concrete failure. Given these inputs or this state, the result is wrong. Not "this is fragile".
+**Defect.** A concrete failure. Given these inputs or this state, the result is wrong. Not "this is fragile". For a simplification finding, where nothing is wrong yet, the fact that makes the code unnecessary and the evidence for it, so the receiving agent can confirm in a minute that removal is safe.
 
 **Required outcome.** What must be true when the task is done. Prescribe a patch only when one specific fix is acceptable, otherwise state the goal and let the agent choose.
 

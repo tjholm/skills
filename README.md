@@ -31,6 +31,11 @@ together: `eject-problem-set` splits a findings list into task files under
 `.review/`, `next-review-task` works one of them per session, and
 `clean-review-tasks` prunes the ones that are done.
 
+`simplify-code` is a review skill in the same shape as a code critique: it
+reports findings, each with the fact that proves the code unnecessary, and
+does not rewrite. Its output is a findings list, so `eject-problem-set` takes
+it from there like any other review.
+
 ## License
 
 MIT -- see `LICENSE.md`.

@@ -1,31 +1,31 @@
 ---
 name: simplify-code
-description: Strip a file, module, or diff down to the code its actual problem requires. Targets the shape of generated code — guards for unreachable states, options nobody passes, abstractions with one user, layers that only forward, branches that hedge between input shapes, logic reimplemented from the standard library — and rewrites each unit as someone who knew the real inputs and callers would have written it. Use when asked to simplify, de-bloat, or tidy code, when reviewing AI-generated code, or when a function spends more lines preparing for what might happen than doing what does.
+description: Review a file, module, diff, or codebase for code its actual problem does not require, and report each instance with the fact that makes it unnecessary. Targets the shape of generated code — guards for unreachable states, options nobody passes, abstractions with one user, layers that only forward, branches that hedge between input shapes, logic reimplemented from the standard library. Use when asked to simplify, de-bloat, or tidy code, when reviewing AI-generated code, or when a function spends more lines preparing for what might happen than doing what does. Reports findings; fixes only when asked to.
 ---
 
 # Simplify code
 
-Generated code is complicated for one reason: the author did not know the facts. It did not know what the callers pass, whether a value can be null, what already exists in the repo, or which of two shapes the input really has. So it hedged, and every hedge became a branch, an option, a wrapper, or a check. The result is code that reasons about a problem far larger than the one it solves.
+Review whatever code you are pointed at for complexity the problem does not demand. Report findings only. No praise, no restating what the code does, no rewriting unless asked to fix.
 
-Simplifying is therefore not trimming. It is recovering the facts the author lacked and then writing the code that a person who had them would have written. Usually that code is a fraction of the size.
+Generated code is complicated for one reason: the author did not know the facts. It did not know what the callers pass, whether a value can be null, what already exists in the repo, or which of two shapes the input really has. So it hedged, and every hedge became a branch, an option, a wrapper, or a check. A finding here is therefore not "this is too complex"; it is "this exists because of a fact the author lacked, and here is the fact".
 
-**The test.** For every branch, parameter, layer, and abstraction: name the concrete caller, input, or requirement that needs it. If you can, it stays. If you cannot, it goes.
+**The test.** For every branch, parameter, layer, and abstraction: name the concrete caller, input, or requirement that needs it. If you can, it stays. If you cannot, and you can state the fact that rules it out, it is a finding.
 
 ## 1. Establish the facts
 
-Do this before editing. Read the unit under review, then answer in writing:
+Before judging, for the unit under review:
 
-- **What must it do?** State the requirement in one or two sentences, from the callers and the tests rather than from the code's own comments. The code often solves a more general problem than anyone asked for.
-- **What are the real inputs?** `grep` every call site. Record the actual types and shapes that arrive. Note which parameters are always the same value, always present, or never passed.
-- **Where is the boundary?** Mark where untrusted data enters: request handlers, CLI parsing, file and network reads, deserialisation, environment, external APIs. Everything inside receives values the boundary already checked.
-- **What already exists?** Look for repo utilities, the standard library, and established patterns for the same job. Generated code reinvents what it did not know about.
-- **Why is the odd part odd?** For anything that looks unjustified but deliberate, run `git log -S'<snippet>'` or `git blame` before removing it. A workaround with a reason in its commit message is not bloat. If the history shows it arrived in the same generated commit as everything else, it has no reason.
+- **What must it do?** The requirement in one or two sentences, from the callers and the tests rather than from the code's own comments.
+- **What are the real inputs?** `grep` every call site. Record the actual types and shapes that arrive, which parameters are always the same value, always present, or never passed.
+- **Where is the boundary?** Request handlers, CLI parsing, file and network reads, deserialisation, environment, external APIs. Everything inside receives values the boundary already checked.
+- **What already exists?** Repo utilities, the standard library, established patterns for the same job.
+- **Why is the odd part odd?** For anything that looks unjustified but deliberate, `git log -S'<snippet>'` before flagging it. A workaround with a reason in its commit message is not a finding.
 
-If a fact cannot be established, say so and leave the code that depends on it alone.
+A fact you cannot establish is not a finding either. Say what you could not determine and move on.
 
 ## 2. Find the unearned complexity
 
-Read each function top to bottom. At every branch, parameter, indirection, and abstraction, ask what fact would have let the author leave it out. The patterns below are grouped by the fact that was missing.
+Read each function top to bottom. At every branch, parameter, indirection, and abstraction, ask what fact would have let the author leave it out. Patterns, grouped by the missing fact:
 
 ### Did not know the inputs
 
@@ -85,52 +85,42 @@ Read each function top to bottom. At every branch, parameter, indirection, and a
 - Doc comments that repeat the signature parameter by parameter.
 - A log line per step of a function that has no operational reason to log.
 
-## 3. Rewrite from the facts
+## 3. Prove each finding
 
-Piecewise deletion leaves the skeleton of the hedging behind. For each function, once the facts are in hand, ask: what is the shortest correct code that does what the callers need with the inputs they send? Write that. Compare it with the original to be sure every reachable behaviour is preserved, then replace.
+A finding without evidence is an opinion, and a fresh agent acting on it later will delete real behaviour. Each finding carries one of:
 
-Rules while rewriting:
+- **Type.** The declared type excludes the case.
+- **Callers.** Every call site is in the repo; list them; none produces the case or passes the option. If callers exist outside the repo, the function is a boundary and there is no finding.
+- **Upstream.** An earlier check on the same path already rejects the case, named by file and line, and nothing between can reintroduce it.
+- **Construction.** The value is built by code you can read, named, which always produces the assumed state.
+- **Existence.** The library or utility that replaces the code does the same thing for the same inputs, checked against its documentation, not its name.
 
-- **Tighten types instead of checking values.** If a guard exists because the parameter is `any`, `unknown`, `interface{}`, or `dict`, the fix is the type, and then the guard is provably dead. If tightening is out of scope, leave the guard and report the type.
-- **Write the specific, not the general.** Replace the strategy pattern with the `if`. Replace the generic with the concrete type. Replace the option with the value every caller passes.
-- **Inline single-use abstractions** into their one call site, unless the name is doing real work for the reader.
-- **Follow the consequences.** Removing a nullable return lets you remove the null checks in every caller. Removing an option removes its plumbing through every layer. One fact often collapses several sites; take them all.
-- **Delete, do not soften.** No comment saying the case cannot happen. No `assert` in place of a guard unless the repo already uses assertions for invariants. No condition left with an empty body.
-- **Match the surrounding code.** The result should look like the rest of the repo wrote it, not like a different style arrived.
+If the proof would be "the type says so" but the type is `any`, `unknown`, `interface{}`, or `dict`, the finding is the type, not the guard: flag the loose type, with the guard as its consequence.
 
-## 4. Prove each removal
+Nothing with no proof is reported as a finding. It may be reported, separately, as a fact that could not be established.
 
-A removal justified only by intuition is how real behaviour disappears. For each thing you delete, hold one piece of evidence:
+## 4. Report
 
-- **Type.** The declared type excludes the case, and the checker still passes without the guard.
-- **Callers.** Every call site is in the repo and none produces the case or passes the option. If callers exist outside the repo, the function is a boundary; leave its checks.
-- **Upstream.** An earlier check on the same path already rejects the case, and nothing between can reintroduce it.
-- **Construction.** The value is built by code you can read, which always produces the state assumed.
-- **Existence.** The library or utility you are replacing the code with does the same thing for the same inputs, checked against its documentation, not its name.
+Every finding, regardless of how expensive the fix is or how many there are. A scoped request narrows what you are asked about, not what you may flag.
 
-If none applies, the code stays.
+Each finding: location — what is unnecessary — the fact that makes it so, with the proof — the fix — what the fix unlocks, if anything. For example:
 
-## 5. Verify
+> `src/jobs/parseConfig.ts:41-44` — null check and early return on `opts`. `opts: ParseOptions` is non-optional and all four callers (`cli.ts:88`, `server.ts:120`, `worker.ts:33`, `parseConfig.test.ts:12`) pass a literal. Fix: delete lines 41-44. Unlocks: return type becomes `Config` not `Config | null`, which makes the null checks at `cli.ts:90` and `server.ts:122` dead too. *(callers)*
 
-Type checker and tests pass before and after.
+> `src/export/Exporter.ts:1-60` — `ExportStrategy` interface with two implementations, both in this file, selected by a string. Neither is used elsewhere; nothing registers a third. Fix: one function with an `if` on the format. *(callers)*
 
-A test that fails because it fed an impossible input directly to an internal function, or exercised an option nothing passes, was testing the hedge rather than the behaviour. Delete it with the code it tested. If a boundary case is now uncovered, write the test at the boundary.
+> `src/util/collections.ts:12-30` — hand-rolled `groupBy`. `Object.groupBy` is in the repo's target (`tsconfig` lib `es2024`) and does the same for these inputs. Fix: replace and delete. *(existence)*
 
-A test that fails for any other reason means your fact was wrong. Restore the code and record why before continuing.
+Order by what each fix unlocks, most first. Group findings that share one fact: a tightened return type and the caller checks it makes dead are one finding with several locations.
 
-## 6. Report
+After the findings, and separately:
 
-The diff, then one line per removal naming the fact that justified it:
+- **Could not establish.** Facts you needed and could not get, each with what would settle it. These are not findings.
+- **Type problems.** Loose types whose tightening would turn several hedges into provably dead code.
 
-```
-parseConfig: dropped null check on opts — non-optional, all 4 callers pass a literal
-Exporter: replaced Strategy interface with if/else — two implementations, both in this file
-fetchAll: removed `parallel` option — every caller passes true
-```
+Then stop. Five or more findings, or three or more files, is `eject-problem-set`'s territory; the format above gives it what each task file needs. If asked to fix rather than review, apply the fixes, run the type checker and tests before and after, and delete any test that fails only because it fed an impossible input to an internal function.
 
-Nothing else. Do not list what you considered and kept, except a typing problem the user should fix.
-
-## What is not unearned
+## What is not a finding
 
 - Validation at a boundary, however excessive it looks.
 - Error handling for I/O, network, filesystem, and process failures. These are always reachable.
