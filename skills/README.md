@@ -8,6 +8,7 @@ Current categories:
 
     review-workflow/   the .review/ task-file loop: eject, work, clean up
     code-quality/      make code smaller and plainer without changing behaviour
+    comprehension/     keep judgment and understanding while an agent writes the code
 
 A directory holding a `SKILL.md` is a skill; a directory that does not is a
 category of them. The `skills` CLI walks this tree, so the categories are for
